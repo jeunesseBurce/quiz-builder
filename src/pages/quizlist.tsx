@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { Search, Code, Plus, Filter, Clock, MoreVertical, Edit, Trash2, Copy } from "lucide-react";
+import { Search, Code, Plus, Filter, Clock, MoreVertical, Edit, Trash2, Copy, Play } from "lucide-react";
 import { Card } from "../components/card";
 import { Button } from "../components/button";
 import { Input } from "../components/input";
@@ -214,14 +214,26 @@ export function QuizList() {
               )}
             </div>
 
-            <Button
-              className="w-full mt-4"
-              variant="outline"
-              onClick={() => navigate(`/quiz/${quiz.id}`)}
-            >
-              <Edit className="w-4 h-4 mr-2" />
-              Edit Quiz
-            </Button>
+            <div className="grid grid-cols-2 gap-2 mt-4">
+              <Button
+                variant="outline"
+                onClick={() => navigate(`/quiz/${quiz.id}`)}
+              >
+                <Edit className="w-4 h-4 mr-2" />
+                Edit
+              </Button>
+              {quiz.status === "Published" && (
+                <Button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/play/${quiz.id}`);
+                  }}
+                >
+                  <Play className="w-4 h-4 mr-2" />
+                  Take Quiz
+                </Button>
+              )}
+            </div>
           </Card>
         ))}
       </div>

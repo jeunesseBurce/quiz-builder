@@ -11,6 +11,7 @@ import {
   Code,
   CheckSquare,
   Type,
+  Play,
 } from "lucide-react";
 import { Card } from "../components/card";
 import { Button } from "../components/button";
@@ -109,6 +110,10 @@ export function QuizBuilder() {
                 <Eye className="w-4 h-4 mr-2" />
                 Preview
               </Button>
+              <Button variant="outline" onClick={() => navigate(`/play/${1}`)}>
+                <Play className="w-4 h-4 mr-2" />
+                Test Quiz
+              </Button>
               <Button variant="outline" onClick={saveQuiz}>
                 <Save className="w-4 h-4 mr-2" />
                 Save Draft
@@ -122,13 +127,13 @@ export function QuizBuilder() {
               type="text"
               value={quizTitle}
               onChange={(e) => setQuizTitle(e.target.value)}
-              className="text-2xl font-bold border-none px-0 focus:ring-0 mb-2"
+              className="text-2xl font-bold border-none px-0 focus:ring-0 mb-2 px-4"
               placeholder="Quiz Title"
             />
             <Textarea
               value={quizDescription}
               onChange={(e) => setQuizDescription(e.target.value)}
-              className="resize-none border-none px-0 focus:ring-0"
+              className="resize-none border-none px-0 focus:ring-0 px-4"
               placeholder="Add a description..."
               rows={2}
             />
@@ -343,26 +348,14 @@ export function QuizBuilder() {
                   </div>
 
                   <div>
-                    <Label htmlFor="timeLimit">Time Limit (minutes)</Label>
+                    <Label htmlFor="timeLimit">Time Limit (seconds)</Label>
                     <Input
                       id="timeLimit"
                       type="number"
-                      placeholder="30"
+                      placeholder="300"
                       className="mt-1"
-                      min="5"
-                      max="180"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="passingScore">Passing Score (%)</Label>
-                    <Input
-                      id="passingScore"
-                      type="number"
-                      placeholder="70"
-                      className="mt-1"
-                      min="0"
-                      max="100"
+                      min="300"
+                      max="10800"
                     />
                   </div>
                 </div>
