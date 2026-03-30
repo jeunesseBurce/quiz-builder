@@ -23,14 +23,13 @@ import { useSubmitQuizResult } from "../hooks/useQuizResults";
 import { apiClient } from "../services";
 
 interface Answer {
-  questionId: string;
+  questionId: number;
   answer: string | number;
 }
 
 export function QuizPlayer() {
   const navigate = useNavigate();
-  const { paramsId } = useParams();
-  const id = Number(paramsId);
+  const { id } = useParams();
   const { data: quiz, isLoading } = useQuiz(id);
   const submitResult = useSubmitQuizResult();
 
@@ -38,6 +37,7 @@ export function QuizPlayer() {
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [showResults, setShowResults] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(0);
+  const [attemptID, setAttemptID] = useState(0);
   const [startTime] = useState(Date.now());
 
   useEffect(() => {
@@ -62,6 +62,7 @@ export function QuizPlayer() {
   const attemptQuiz = async () => {
     console.log(id);
     const dataAttempt = await apiClient.attemptQuiz(id);
+    setAttemptID(dataAttempt.id);
     console.log(dataAttempt);
   }
 
@@ -96,11 +97,11 @@ export function QuizPlayer() {
     return `${minutes}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const getAnswer = (questionId: string) => {
+  const getAnswer = (questionId: number) => {
     return answers.find((a) => a.questionId === questionId)?.answer;
   };
 
-  const setAnswer = (questionId: string, answer: string | number) => {
+  const setAnswer = (questionId: number, answer: string | number) => {
     setAnswers((prev) => {
       const existing = prev.findIndex((a) => a.questionId === questionId);
       if (existing >= 0) {
@@ -128,6 +129,11 @@ export function QuizPlayer() {
     setCurrentQuestionIndex(index);
   };
 
+  const submitAttempt = async () => {
+    const submitDataAttempt = await apiClient.submitAttempt(id);
+    console.log(submitDataAttempt);
+  }
+
   const submitQuiz = async () => {
     if (answers.length < quiz.questions.length) {
       const unanswered = quiz.questions.length - answers.length;
@@ -144,10 +150,10 @@ export function QuizPlayer() {
         quizId: quiz.id,
         answers: answers,
         score: score.totalScore,
-        percentage: score.percentage,
-        timeTaken: timeTaken,
-        passed: score.percentage >= quiz.passingScore,
+        timeSpent: timeTaken
       });
+
+      submitAttempt();
 
       toast.success("Quiz submitted successfully!");
       setShowResults(true);
@@ -175,33 +181,11 @@ export function QuizPlayer() {
 
   if (showResults) {
     const score = calculateScore();
-    const passed = score.percentage >= quiz.passingScore;
 
     return (
       <div className="min-h-screen bg-gray-50 p-6 lg:p-8">
         <div className="max-w-3xl mx-auto">
           <Card className="p-8">
-            <div className="text-center mb-8">
-              <div
-                className={`w-24 h-24 rounded-full mx-auto mb-6 flex items-center justify-center ${
-                  passed
-                    ? "bg-green-100"
-                    : "bg-red-100"
-                }`}
-              >
-                {passed ? (
-                  <CheckCircle className="w-12 h-12 text-green-600" />
-                ) : (
-                  <AlertCircle className="w-12 h-12 text-red-600" />
-                )}
-              </div>
-              <h1 className="text-3xl font-bold mb-2">
-                {passed ? "Congratulations!" : "Quiz Complete"}
-              </h1>
-              <p className="text-gray-600">
-                {passed ? "You passed the quiz!" : "Keep practicing!"}
-              </p>
-            </div>
 
             <div className="grid md:grid-cols-3 gap-6 mb-8">
               <Card className="p-6 text-center bg-gradient-to-br from-blue-50 to-blue-100">
@@ -217,10 +201,6 @@ export function QuizPlayer() {
               <Card className="p-6 text-center bg-gradient-to-br from-green-50 to-green-100">
                 <p className="text-3xl font-bold text-green-600 mb-1">
                   {Math.round(score.percentage)}%
-                </p>
-                <p className="text-sm text-gray-600">Percentage</p>
-                <p className="text-xs text-gray-500 mt-1">
-                  {quiz.passingScore}% required to pass
                 </p>
               </Card>
             </div>
@@ -248,7 +228,7 @@ export function QuizPlayer() {
                         </span>
                       </div>
                       <div className="flex-1">
-                        <p className="font-medium mb-2">{question.title}</p>
+                        <p className="font-medium mb-2">{question.prompt}</p>
                         {question.type === "mcq" && question.options && (
                           <div className="text-sm space-y-1">
                             <p className="text-gray-600">
@@ -268,9 +248,7 @@ export function QuizPlayer() {
                           </div>
                         )}
                       </div>
-                      <Badge className={isCorrect ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
-                        {isCorrect ? `+${question.points}` : "0"} pts
-                      </Badge>
+                     
                     </div>
                   </Card>
                 );
@@ -376,17 +354,13 @@ export function QuizPlayer() {
                       {currentQuestionIndex + 1}
                     </div>
                     <div>
-                      <h2 className="text-xl font-semibold">{currentQuestion.title}</h2>
-                      <p className="text-sm text-gray-500 mt-1">{currentQuestion.points} points</p>
+                      <h2 className="text-xl font-semibold">{currentQuestion.prompt}</h2>
                     </div>
                   </div>
-                  <Badge variant="outline">{quiz.difficulty}</Badge>
                 </div>
-
                 {currentQuestion.codeSnippet && (
                   <div className="mb-6">
                     <SyntaxHighlighter
-                      language={quiz.language}
                       style={vscDarkPlus}
                       className="rounded-lg"
                     >
@@ -437,33 +411,14 @@ export function QuizPlayer() {
                   />
                 )}
 
-                {currentQuestion.type === "code" && currentQuestion.options && (
-                  <RadioGroup
-                    value={getAnswer(currentQuestion.id)?.toString()}
-                    onValueChange={(value) => setAnswer(currentQuestion.id, parseInt(value))}
-                  >
-                    <div className="space-y-3">
-                      {currentQuestion.options.map((option, index) => (
-                        <div
-                          key={index}
-                          className={`flex items-center space-x-3 p-4 rounded-lg border-2 transition-colors cursor-pointer ${
-                            getAnswer(currentQuestion.id) === index
-                              ? "border-purple-600 bg-purple-50"
-                              : "border-gray-200 hover:border-gray-300"
-                          }`}
-                          onClick={() => setAnswer(currentQuestion.id, index)}
-                        >
-                          <RadioGroupItem value={index.toString()} id={`option-${index}`} />
-                          <Label
-                            htmlFor={`option-${index}`}
-                            className="flex-1 cursor-pointer font-mono font-normal"
-                          >
-                            {option}
-                          </Label>
-                        </div>
-                      ))}
-                    </div>
-                  </RadioGroup>
+                {currentQuestion.type === "code" && (
+                  <Textarea
+                    placeholder="Type your answer here..."
+                    rows={6}
+                    value={(getAnswer(currentQuestion.id) as string) || ""}
+                    onChange={(e) => setAnswer(currentQuestion.id, e.target.value)}
+                    className="resize-none"
+                  />
                 )}
               </div>
 

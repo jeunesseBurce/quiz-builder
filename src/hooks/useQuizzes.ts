@@ -9,7 +9,7 @@ export const quizKeys = {
   lists: () => [...quizKeys.all, "list"] as const,
   list: (filters?: string) => [...quizKeys.lists(), { filters }] as const,
   details: () => [...quizKeys.all, "detail"] as const,
-  detail: (id: number) => [...quizKeys.details(), id] as const,
+  detail: (id: string) => [...quizKeys.details(), id] as const,
   templates: () => [...quizKeys.all, "templates"] as const,
 };
 
@@ -21,7 +21,7 @@ export function useQuizzes() {
   });
 }
 
-export function useQuiz(id: number | undefined) {
+export function useQuiz(id: string | undefined) {
   return useQuery({
     queryKey: quizKeys.detail(id!),
     queryFn: () => apiClient.getQuiz(id!),

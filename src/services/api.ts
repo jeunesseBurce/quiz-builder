@@ -33,16 +33,18 @@ export interface Question {
   options?: string[];
   correctAnswer?: string | number;
   position: number;
+  points: number;
+  codeSnippet?: string;
 }
 
 export interface QuizResultData {
   id: number;
   quizId: number;
   userId?: string;
-  answers: Array<{ questionId: string; answer: string | number }>;
+  answers: Array<{ questionId: number; answer: string | number }>;
   score: number;
-  percentage: number;
-  completedAt: string;
+  percentage?: number;
+  completedAt?: string;
   timeSpent: number;
 }
 
@@ -53,6 +55,11 @@ export interface QuizAttempt {
   submittedAt: string | null;
   answers: string[];
   quiz: Omit<Quiz, "isPublished" | "createdAt" >;
+}
+
+export interface QuizAttemptSubmit {
+  score: number;
+  details: string[];
 }
 
 export interface QuizStats {
@@ -132,6 +139,12 @@ class ApiService {
       body: JSON.stringify({
         quizId: id
       })
+    });
+  }
+
+  async submitAttempt(id: number): Promise<QuizAttemptSubmit> {
+    return this.request<QuizAttemptSubmit>(`/attempts/${id}/submit`, {
+      method: "POST"
     });
   }
 

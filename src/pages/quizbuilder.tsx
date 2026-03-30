@@ -25,8 +25,7 @@ import type { Question } from "../services";
 
 export function QuizBuilder() {
   const navigate = useNavigate();
-  const { paramsId } = useParams();
-  const id = Number(paramsId);
+  const { id } = useParams();
   const { data: existingQuiz, isLoading: loadingQuiz } = useQuiz(id);
   const createQuiz = useCreateQuiz();
   const updateQuiz = useUpdateQuiz();
@@ -49,7 +48,8 @@ export function QuizBuilder() {
       prompt: "What is the output of console.log(typeof null)?",
       options: ["object", "null", "undefined", "number"],
       correctAnswer: 0,
-      position: 0
+      position: 0,
+      points: 10
     },
   ]);
 
@@ -64,9 +64,13 @@ export function QuizBuilder() {
 
   const addQuestion = (type: Question["type"]) => {
     const newQuestion: Question = {
-      id: Math.random(),
-      type,
-      ...(type === "mcq" && { options: ["", "", "", ""], correctAnswer: 0 }),
+        id: Math.random(),
+        type,
+        ...(type === "mcq" && { options: ["", "", "", ""], correctAnswer: 0 }),
+        quizId: 0,
+        prompt: "",
+        position: 0,
+        points: 0
     };
     setQuestions([...questions, newQuestion]);
   };
@@ -100,12 +104,12 @@ export function QuizBuilder() {
 
   const publishQuiz = async () => {
     const quizData = {
+      id: Math.random(),
       title: quizTitle,
       description: quizDescription,
       timeLimitSeconds: timeLimit,
       isPublished: true,
       createdAt: Date.now().toString(),
-      status: "Published",
       questions: questions,
     };
 
@@ -259,9 +263,9 @@ export function QuizBuilder() {
                           <div>
                             <Label>Question</Label>
                             <Input
-                              value={question.title}
+                              value={question.prompt}
                               onChange={(e) =>
-                                updateQuestion(question.id, { title: e.target.value })
+                                updateQuestion(question.id, { prompt: e.target.value })
                               }
                               placeholder="Enter your question..."
                               className="mt-1"
@@ -435,7 +439,7 @@ export function QuizBuilder() {
                           {index + 1}
                         </span>
                         <div className="flex-1">
-                          <h3 className="font-medium text-lg">{question.title || "Untitled Question"}</h3>
+                          <h3 className="font-medium text-lg">{question.prompt || "Untitled Question"}</h3>
                           <p className="text-sm text-gray-500 mt-1">{question.points} points</p>
                         </div>
                       </div>

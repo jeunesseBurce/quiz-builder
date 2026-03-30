@@ -1,6 +1,6 @@
 // Mock Data Service - Use this for development/testing
 // Switch to real API by setting USE_MOCK_DATA = false
-import type { Quiz, QuizAttempt, QuizResult, QuizStats } from "./api";
+import type { Quiz, QuizAttempt, QuizResultData, QuizStats, QuizAttemptSubmit } from "./api";
 
 export const USE_MOCK_DATA = false; // Set to false to use real backend
 
@@ -20,7 +20,8 @@ let mockQuizzes: Quiz[] = [
         prompt: "What is the output of console.log(typeof null)?",
         options: ["object", "null", "undefined", "number"],
         correctAnswer: 0,
-        position: 0
+        position: 0,
+        points: 10
       },
       {
         id: 1,
@@ -30,6 +31,7 @@ let mockQuizzes: Quiz[] = [
         options: ["push()", "pop()", "shift()", "unshift()"],
         correctAnswer: 0,
         position: 1,
+        points: 10
       },
       {
         id: 1,
@@ -39,6 +41,7 @@ let mockQuizzes: Quiz[] = [
         options: ["20", "25", "30", "15"],
         correctAnswer: 1,
         position: 3,
+        points: 10
       },
     ],
   },
@@ -62,7 +65,8 @@ let mockQuizzes: Quiz[] = [
           "Never",
         ],
         correctAnswer: 0,
-        position: 0
+        position: 0,
+        points: 10
       },
     ],
   },
@@ -77,7 +81,7 @@ let mockQuizzes: Quiz[] = [
   },
 ];
 
-let mockResults: QuizResult[] = [];
+let mockResults: QuizResultData[] = [];
 
 // Simulate network delay
 const delay = (ms: number = 300) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -172,9 +176,20 @@ export const mockApi = {
     return newQuizAttempt;
   },
 
-  async submitQuizResult(result: Omit<QuizResult, "id" | "completedAt">): Promise<QuizResult> {
+  async submitAttempt(id: number): Promise<QuizAttemptSubmit> {
     await delay();
-    const newResult: QuizResult = {
+    const quiz = mockQuizzes.find((q) => q.id === id);
+    if (!quiz) throw new Error("Quiz not found");
+    const newQuizAttempt: QuizAttemptSubmit = {
+       score: 10,
+       details: []
+    }
+    return newQuizAttempt;
+  },
+
+  async submitQuizResult(result: Omit<QuizResultData, "id" | "completedAt">): Promise<QuizResultData> {
+    await delay();
+    const newResult: QuizResultData = {
       ...result,
       id: Math.random(),
       completedAt: new Date().toISOString(),
@@ -194,7 +209,7 @@ export const mockApi = {
     return newResult;
   },
 
-  async getQuizResults(quizId: number): Promise<QuizResult[]> {
+  async getQuizResults(quizId: number): Promise<QuizResultData[]> {
     await delay();
     return mockResults.filter((r) => r.quizId === quizId);
   },
