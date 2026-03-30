@@ -27,7 +27,7 @@ export function QuizLayout() {
         <div className="flex flex-col flex-1 overflow-y-auto">
           <div className="flex items-center gap-3 px-6 py-6 border-b border-gray-200">
               <img src={BookipiIcon} width="120" height="30" />
-              <h1 className="text-sm text-gray-500">Quiz Builder</h1>
+              <h1 className="text-xl text-black-600">Quiz</h1>
           </div>
           
           <nav className="flex-1 px-4 py-6 space-y-1">

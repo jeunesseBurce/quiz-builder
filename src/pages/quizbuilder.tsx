@@ -1,11 +1,9 @@
-import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router";
 import {
   ArrowLeft,
   Save,
   Eye,
-  Plus,
-  Settings,
   GripVertical,
   Trash2,
   Code,
@@ -20,74 +18,111 @@ import { Label } from "../components/label";
 import { Textarea } from "../components/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/tabs";
 import { Badge } from "../components/badge";
-import { toast } from "sonner";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
-
-interface Question {
-  id: string;
-  type: "multiple-choice" | "code-completion" | "short-answer";
-  title: string;
-  codeSnippet?: string;
-  options?: string[];
-  correctAnswer?: string | number;
-  points: number;
-}
+import { useQuiz, useCreateQuiz, useUpdateQuiz } from "../hooks/useQuizzes";
+import type { Question } from "../services";
 
 export function QuizBuilder() {
   const navigate = useNavigate();
+  const { paramsId } = useParams();
+  const id = Number(paramsId);
+  const { data: existingQuiz, isLoading: loadingQuiz } = useQuiz(id);
+  const createQuiz = useCreateQuiz();
+  const updateQuiz = useUpdateQuiz();
+
+  
   const [quizTitle, setQuizTitle] = useState("Untitled Quiz");
   const [quizDescription, setQuizDescription] = useState("");
   const [language, setLanguage] = useState("javascript");
   const [difficulty, setDifficulty] = useState("Beginner");
+  const [timeLimit, setTimeLimit] = useState(30);
+  const [passingScore, setPassingScore] = useState(70);
+  const [status, setStatus] = useState<"Draft" | "Published">("Draft");
   const [activeTab, setActiveTab] = useState("questions");
 
   const [questions, setQuestions] = useState<Question[]>([
     {
-      id: "1",
-      type: "multiple-choice",
-      title: "What is the output of console.log(typeof null)?",
-      codeSnippet: "console.log(typeof null);",
+      id: 1,
+      quizId: 1,
+      type: "mcq",
+      prompt: "What is the output of console.log(typeof null)?",
       options: ["object", "null", "undefined", "number"],
       correctAnswer: 0,
-      points: 10,
+      position: 0
     },
   ]);
 
+  useEffect(() => {
+    if (existingQuiz) {
+      setQuizTitle(existingQuiz.title);
+      setQuizDescription(existingQuiz.description);
+      setTimeLimit(existingQuiz.timeLimitSeconds);
+      setQuestions(existingQuiz.questions);
+    }
+  }, [existingQuiz]);
+
   const addQuestion = (type: Question["type"]) => {
     const newQuestion: Question = {
-      id: Date.now().toString(),
+      id: Math.random(),
       type,
-      title: "",
-      points: 10,
-      ...(type === "multiple-choice" && { options: ["", "", "", ""], correctAnswer: 0 }),
+      ...(type === "mcq" && { options: ["", "", "", ""], correctAnswer: 0 }),
     };
     setQuestions([...questions, newQuestion]);
   };
 
-  const updateQuestion = (id: string, updates: Partial<Question>) => {
+  const updateQuestion = (id: number, updates: Partial<Question>) => {
     setQuestions(questions.map((q) => (q.id === id ? { ...q, ...updates } : q)));
   };
 
-  const deleteQuestion = (id: string) => {
+  const deleteQuestion = (id: number) => {
     setQuestions(questions.filter((q) => q.id !== id));
   };
 
-  const saveQuiz = () => {
-    toast.success("Quiz saved successfully!");
+  const saveQuiz = async () => {
+    const quizData = {
+      id: id,
+      title: quizTitle,
+      description: quizDescription,
+      timeLimitSeconds: timeLimit,
+      isPublished: false,
+      createdAt: Date.now().toString(),
+      status: status,
+      questions: questions,
+    };
+
+    if (id) {
+        updateQuiz.mutate({ id, data: quizData });
+      } else {
+        createQuiz.mutate(quizData);
+      }
   };
 
-  const publishQuiz = () => {
-    toast.success("Quiz published!");
+  const publishQuiz = async () => {
+    const quizData = {
+      title: quizTitle,
+      description: quizDescription,
+      timeLimitSeconds: timeLimit,
+      isPublished: true,
+      createdAt: Date.now().toString(),
+      status: "Published",
+      questions: questions,
+    };
+
+    if (id) {
+      updateQuiz.mutate({ id, data: quizData });
+    } else {
+      createQuiz.mutate(quizData);
+    }
   };
 
   const getQuestionIcon = (type: Question["type"]) => {
     switch (type) {
-      case "multiple-choice":
+      case "mcq":
         return CheckSquare;
-      case "code-completion":
+      case "code":
         return Code;
-      case "short-answer":
+      case "short":
         return Type;
     }
   };
@@ -126,12 +161,14 @@ export function QuizBuilder() {
             <Input
               type="text"
               value={quizTitle}
+              required
               onChange={(e) => setQuizTitle(e.target.value)}
               className="text-2xl font-bold border-none px-0 focus:ring-0 mb-2 px-4"
               placeholder="Quiz Title"
             />
             <Textarea
               value={quizDescription}
+              required
               onChange={(e) => setQuizDescription(e.target.value)}
               className="resize-none border-none px-0 focus:ring-0 px-4"
               placeholder="Add a description..."
@@ -160,7 +197,7 @@ export function QuizBuilder() {
                   <Button
                     variant="outline"
                     className="h-auto py-4 flex-col"
-                    onClick={() => addQuestion("multiple-choice")}
+                    onClick={() => addQuestion("mcq")}
                   >
                     <CheckSquare className="w-6 h-6 mb-2" />
                     <span className="font-medium">Multiple Choice</span>
@@ -169,7 +206,7 @@ export function QuizBuilder() {
                   <Button
                     variant="outline"
                     className="h-auto py-4 flex-col"
-                    onClick={() => addQuestion("code-completion")}
+                    onClick={() => addQuestion("code")}
                   >
                     <Code className="w-6 h-6 mb-2" />
                     <span className="font-medium">Code Completion</span>
@@ -178,7 +215,7 @@ export function QuizBuilder() {
                   <Button
                     variant="outline"
                     className="h-auto py-4 flex-col"
-                    onClick={() => addQuestion("short-answer")}
+                    onClick={() => addQuestion("short")}
                   >
                     <Type className="w-6 h-6 mb-2" />
                     <span className="font-medium">Short Answer</span>
@@ -207,9 +244,6 @@ export function QuizBuilder() {
                               <Icon className="w-5 h-5 text-gray-600" />
                               <Badge variant="secondary" className="text-xs">
                                 {question.type.replace("-", " ")}
-                              </Badge>
-                              <Badge variant="outline" className="text-xs">
-                                {question.points} pts
                               </Badge>
                             </div>
                             <Button
@@ -261,7 +295,7 @@ export function QuizBuilder() {
                             </div>
                           )}
 
-                          {question.type === "multiple-choice" && question.options && (
+                          {question.type === "mcq" && question.options && (
                             <div>
                               <Label>Answer Options</Label>
                               <div className="space-y-2 mt-2">
@@ -348,14 +382,28 @@ export function QuizBuilder() {
                   </div>
 
                   <div>
-                    <Label htmlFor="timeLimit">Time Limit (seconds)</Label>
+                    <Label htmlFor="timeLimit">Time Limit (minutes)</Label>
                     <Input
                       id="timeLimit"
                       type="number"
-                      placeholder="300"
+                      value={timeLimit}
+                      onChange={(e) => setTimeLimit(Number(e.target.value))}
                       className="mt-1"
-                      min="300"
-                      max="10800"
+                      min="5"
+                      max="180"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="passingScore">Passing Score (%)</Label>
+                    <Input
+                      id="passingScore"
+                      type="number"
+                      value={passingScore}
+                      onChange={(e) => setPassingScore(Number(e.target.value))}
+                      className="mt-1"
+                      min="0"
+                      max="100"
                     />
                   </div>
                 </div>
@@ -404,7 +452,7 @@ export function QuizBuilder() {
                         </div>
                       )}
 
-                      {question.type === "multiple-choice" && question.options && (
+                      {question.type === "mcq" && question.options && (
                         <div className="space-y-2">
                           {question.options.map((option, optIndex) => (
                             <div
@@ -418,7 +466,7 @@ export function QuizBuilder() {
                         </div>
                       )}
 
-                      {question.type === "short-answer" && (
+                      {question.type === "short" && (
                         <Textarea placeholder="Your answer..." rows={3} />
                       )}
                     </div>

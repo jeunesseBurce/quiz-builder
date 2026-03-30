@@ -1,4 +1,4 @@
-import { User, Mail, Building, Calendar, Settings, Bell, Shield, HelpCircle, LogOut } from "lucide-react";
+import { Settings, Shield, HelpCircle, LogOut } from "lucide-react";
 import { Card } from "../components/card";
 import { Button } from "../components/button";
 import { Avatar, AvatarFallback } from "../components/avatar";

@@ -1,12 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router";
 import {
   ArrowLeft,
   ArrowRight,
   CheckCircle,
   Clock,
-  Code,
-  Flag,
   Send,
   AlertCircle,
 } from "lucide-react";
@@ -20,16 +18,9 @@ import { Label } from "../components/label";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { toast } from "sonner";
-
-interface Question {
-  id: string;
-  type: "multiple-choice" | "code-completion" | "short-answer";
-  title: string;
-  codeSnippet?: string;
-  options?: string[];
-  correctAnswer?: string | number;
-  points: number;
-}
+import { useQuiz } from "../hooks/useQuizzes";
+import { useSubmitQuizResult } from "../hooks/useQuizResults";
+import { apiClient } from "../services";
 
 interface Answer {
   questionId: string;
@@ -38,66 +29,61 @@ interface Answer {
 
 export function QuizPlayer() {
   const navigate = useNavigate();
-  const { id } = useParams();
+  const { paramsId } = useParams();
+  const id = Number(paramsId);
+  const { data: quiz, isLoading } = useQuiz(id);
+  const submitResult = useSubmitQuizResult();
+
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [showResults, setShowResults] = useState(false);
-  const [timeRemaining, setTimeRemaining] = useState(1800); // 30 minutes in seconds
+  const [timeRemaining, setTimeRemaining] = useState(0);
+  const [startTime] = useState(Date.now());
 
-  // Mock quiz data
-  const quiz = {
-    id: id || "1",
-    title: "JavaScript Fundamentals Quiz",
-    description: "Test your knowledge of JavaScript basics and core concepts",
-    language: "javascript",
-    difficulty: "Beginner",
-    timeLimit: 30,
-    passingScore: 70,
-    questions: [
-      {
-        id: "1",
-        type: "multiple-choice" as const,
-        title: "What is the output of console.log(typeof null)?",
-        codeSnippet: "console.log(typeof null);",
-        options: ["object", "null", "undefined", "number"],
-        correctAnswer: 0,
-        points: 10,
-      },
-      {
-        id: "2",
-        type: "multiple-choice" as const,
-        title: "Which method is used to add an element to the end of an array?",
-        options: ["push()", "pop()", "shift()", "unshift()"],
-        correctAnswer: 0,
-        points: 10,
-      },
-      {
-        id: "3",
-        type: "code-completion" as const,
-        title: "What will be the value of 'result' after this code executes?",
-        codeSnippet: `let x = 5;
-let y = 10;
-let result = x + y * 2;`,
-        options: ["20", "25", "30", "15"],
-        correctAnswer: 1,
-        points: 15,
-      },
-      {
-        id: "4",
-        type: "short-answer" as const,
-        title: "Explain what a closure is in JavaScript in your own words.",
-        points: 15,
-      },
-      {
-        id: "5",
-        type: "multiple-choice" as const,
-        title: "Which of the following is NOT a JavaScript data type?",
-        options: ["String", "Boolean", "Float", "Symbol"],
-        correctAnswer: 2,
-        points: 10,
-      },
-    ] as Question[],
+  useEffect(() => {
+    if (!quiz || showResults) return;
+
+    attemptQuiz();
+    setTimeRemaining(quiz.timeLimitSeconds); // Convert minutes to seconds
+    const timer = setInterval(() => {
+      setTimeRemaining((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          handleTimeUp();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [quiz, showResults]);
+
+  const attemptQuiz = async () => {
+    console.log(id);
+    const dataAttempt = await apiClient.attemptQuiz(id);
+    console.log(dataAttempt);
+  }
+
+  const handleTimeUp = () => {
+    toast.error("Time's up!");
+    submitQuiz();
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading quiz...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!quiz) {
+    return null;
+  }
 
   const currentQuestion = quiz.questions[currentQuestionIndex];
   const progress = ((currentQuestionIndex + 1) / quiz.questions.length) * 100;
@@ -142,13 +128,34 @@ let result = x + y * 2;`,
     setCurrentQuestionIndex(index);
   };
 
-  const submitQuiz = () => {
+  const submitQuiz = async () => {
     if (answers.length < quiz.questions.length) {
       const unanswered = quiz.questions.length - answers.length;
       toast.error(`You have ${unanswered} unanswered question${unanswered > 1 ? "s" : ""}`);
       return;
     }
-    setShowResults(true);
+
+    try {
+      const timeTaken = Math.floor((Date.now() - startTime) / 1000); // seconds
+      const score = calculateScore();
+
+      // Submit quiz results to backend
+      await apiClient.submitQuizResult({
+        quizId: quiz.id,
+        answers: answers,
+        score: score.totalScore,
+        percentage: score.percentage,
+        timeTaken: timeTaken,
+        passed: score.percentage >= quiz.passingScore,
+      });
+
+      toast.success("Quiz submitted successfully!");
+      setShowResults(true);
+    } catch (error) {
+      console.error("Failed to submit quiz:", error);
+      toast.error("Failed to submit quiz. Showing results anyway.");
+      setShowResults(true);
+    }
   };
 
   const calculateScore = () => {
@@ -242,7 +249,7 @@ let result = x + y * 2;`,
                       </div>
                       <div className="flex-1">
                         <p className="font-medium mb-2">{question.title}</p>
-                        {question.type === "multiple-choice" && question.options && (
+                        {question.type === "mcq" && question.options && (
                           <div className="text-sm space-y-1">
                             <p className="text-gray-600">
                               Your answer:{" "}
@@ -391,7 +398,7 @@ let result = x + y * 2;`,
 
               {/* Answer Options */}
               <div className="mb-8">
-                {currentQuestion.type === "multiple-choice" && currentQuestion.options && (
+                {currentQuestion.type === "mcq" && currentQuestion.options && (
                   <RadioGroup
                     value={getAnswer(currentQuestion.id)?.toString()}
                     onValueChange={(value) => setAnswer(currentQuestion.id, parseInt(value))}
@@ -420,7 +427,7 @@ let result = x + y * 2;`,
                   </RadioGroup>
                 )}
 
-                {currentQuestion.type === "short-answer" && (
+                {currentQuestion.type === "short" && (
                   <Textarea
                     placeholder="Type your answer here..."
                     rows={6}
@@ -430,7 +437,7 @@ let result = x + y * 2;`,
                   />
                 )}
 
-                {currentQuestion.type === "code-completion" && currentQuestion.options && (
+                {currentQuestion.type === "code" && currentQuestion.options && (
                   <RadioGroup
                     value={getAnswer(currentQuestion.id)?.toString()}
                     onValueChange={(value) => setAnswer(currentQuestion.id, parseInt(value))}

@@ -1,99 +1,44 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { Search, Code, Plus, Filter, Clock, MoreVertical, Edit, Trash2, Copy, Play } from "lucide-react";
+import { Search, Code, Plus,  MoreVertical, Edit, Trash2, Copy, Play } from "lucide-react";
 import { Card } from "../components/card";
 import { Button } from "../components/button";
 import { Input } from "../components/input";
-import { Badge } from "../components/badge";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../components/dropdown-menu";
+import { useQuizzes, useDeleteQuiz, useDuplicateQuiz } from "../hooks/useQuizzes";
 
 export function QuizList() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
 
-  const quizzes = [
-    {
-      id: 1,
-      title: "JavaScript Fundamentals",
-      description: "Test your knowledge of JavaScript basics",
-      questions: 10,
-      difficulty: "Beginner",
-      language: "JavaScript",
-      lastEdited: "2 hours ago",
-      status: "Published",
-      completions: 145,
-    },
-    {
-      id: 2,
-      title: "Python Data Structures",
-      description: "Master lists, tuples, and dictionaries",
-      questions: 15,
-      difficulty: "Intermediate",
-      language: "Python",
-      lastEdited: "1 day ago",
-      status: "Draft",
-      completions: 0,
-    },
-    {
-      id: 3,
-      title: "React Hooks Quiz",
-      description: "Deep dive into useState, useEffect, and more",
-      questions: 8,
-      difficulty: "Advanced",
-      language: "JavaScript",
-      lastEdited: "3 days ago",
-      status: "Published",
-      completions: 89,
-    },
-    {
-      id: 4,
-      title: "SQL Query Basics",
-      description: "Learn SELECT, JOIN, and WHERE clauses",
-      questions: 12,
-      difficulty: "Beginner",
-      language: "SQL",
-      lastEdited: "5 days ago",
-      status: "Published",
-      completions: 203,
-    },
-    {
-      id: 5,
-      title: "CSS Flexbox & Grid",
-      description: "Modern layout techniques",
-      questions: 10,
-      difficulty: "Intermediate",
-      language: "CSS",
-      lastEdited: "1 week ago",
-      status: "Draft",
-      completions: 0,
-    },
-  ];
+  const { data: quizzes = [], isLoading } = useQuizzes();
+  const deleteQuiz = useDeleteQuiz();
+  const duplicateQuiz = useDuplicateQuiz();
 
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case "Beginner":
-        return "bg-green-100 text-green-800";
-      case "Intermediate":
-        return "bg-yellow-100 text-yellow-800";
-      case "Advanced":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
+ 
+  const handleDelete = (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm("Are you sure you want to delete this quiz?")) return;
+    deleteQuiz.mutate(id);
+  };
+
+  const handleDuplicate = (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    duplicateQuiz.mutate(id);
   };
 
   const filteredQuizzes = quizzes.filter((quiz) => {
     const matchesSearch =
       quiz.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      quiz.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      quiz.language.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter = filterStatus === "all" || quiz.status.toLowerCase() === filterStatus;
+      quiz.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesFilter = filterStatus === "all" || quiz.status?.toLowerCase() === filterStatus;
     return matchesSearch && matchesFilter;
   });
 
@@ -170,48 +115,16 @@ export function QuizList() {
                     <Edit className="w-4 h-4 mr-2" />
                     Edit
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={(e) => handleDuplicate(quiz.id, e)}>
                     <Copy className="w-4 h-4 mr-2" />
                     Duplicate
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="text-red-600">
+                  <DropdownMenuItem className="text-red-600" onClick={(e) => handleDelete(quiz.id, e)}>
                     <Trash2 className="w-4 h-4 mr-2" />
                     Delete
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            </div>
-
-            <div className="flex items-center gap-3 text-sm text-gray-600 mb-4">
-              <span className="flex items-center gap-1">
-                <Code className="w-4 h-4" />
-                {quiz.questions} questions
-              </span>
-              <span>•</span>
-              <span>{quiz.language}</span>
-            </div>
-
-            <div className="flex items-center justify-between mb-4">
-              <Badge className={getDifficultyColor(quiz.difficulty)}>{quiz.difficulty}</Badge>
-              <Badge
-                className={
-                  quiz.status === "Published"
-                    ? "bg-green-100 text-green-800"
-                    : "bg-gray-100 text-gray-800"
-                }
-              >
-                {quiz.status}
-              </Badge>
-            </div>
-
-            <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-              <div className="flex items-center gap-2 text-xs text-gray-500">
-                <Clock className="w-3 h-3" />
-                {quiz.lastEdited}
-              </div>
-              {quiz.status === "Published" && (
-                <span className="text-xs text-gray-600">{quiz.completions} completions</span>
-              )}
             </div>
 
             <div className="grid grid-cols-2 gap-2 mt-4">
