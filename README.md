@@ -44,7 +44,7 @@ localhost:6006
 
 
 # Dashboard 
-<img width="2560" height="1357" alt="Screen Shot 2026-03-29 at 9 07 11 PM" src="https://github.com/user-attachments/assets/426e4988-5d66-4032-a36d-af611761945f" />
+<img width="2560" height="1358" alt="Screen Shot 2026-03-30 at 5 14 48 PM" src="https://github.com/user-attachments/assets/a0c85621-a387-4fb9-a700-018683a940dd" />
 
 # Quizzes 
 <img width="2560" height="1397" alt="Screen Shot 2026-03-29 at 9 07 04 PM" src="https://github.com/user-attachments/assets/3f10a78e-ee80-401e-aa83-b80686971722" />
